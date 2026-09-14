@@ -1,153 +1,33 @@
-# Horse Battle — 온라인 경마 배팅 게임
+# 🐎 Horse Battle
 
-친구들과 각자 기기에서 같은 경주를 보며 배팅하는 웹 게임. 서버 코드 없이 정적 파일만으로 동작하며,
-방 상태는 어댑터(로컬 / Firebase)로 공유하고, 회원 인증과 잔고(지갑)는 서비스 계층이 가진다.
+친구들과 함께 즐기는 온라인 경마 배팅 게임입니다. 각자 자기 폰이나 컴퓨터로 접속해서,
+같은 경주를 실시간으로 같이 보면서 배팅하고 결과에 웃고 웁니다.
 
-## 개발
+- 회원끼리 방을 만들어서 즐기는 게임이에요. 방마다 배팅 금액이 정해지고, 그 안에서는 누구나 같은 금액으로 배팅합니다.
+- 컴퓨터가 그때그때 다른 8마리 말로 경주를 새로 꾸립니다. 각 말마다 도주/선행/선입/추입 같은 달리는 스타일과 배당률이 있어서, 같은 경주는 두 번 다시 없습니다.
+- 막판 스퍼트, 사진 판정, 결승선에서 터지는 불꽃놀이와 색종이까지 — 실제 경마 중계 보는 느낌을 살렸습니다.
 
-```bash
-npm install
-npm run dev      # http://localhost:5173
-npm test         # 엔진 결정성 · 정산 · 비밀번호 해시 테스트
-npm run build    # dist/ 생성
-```
+## 어떻게 시작하나요
 
-## 구조
-
-```
-index.html                Vite 진입점 (마크업)
-src/
-  main.js                 부트스트랩: 서비스 → 세션 → 화면
-  config.js               설정 (VITE_* 환경변수로 덮어쓰기 가능)
-  core/                   순수 로직 (DOM 없음, 테스트 대상)
-    rng.js                시드 난수 (mulberry32)
-    engine.js             결정적 경주 시뮬레이션: 같은 시드 = 같은 결과
-    settlement.js         배팅 금액 상수, 적중 판정, 정산 계산
-  game/
-    session.js            방 상태 ↔ 지갑 연결, 방장/배팅 액션
-    raceLoop.js           프레임 루프: 고정 스텝 따라잡기 + 보간, 연출, 중계, 카메라
-  render/
-    renderer.js           캔버스 렌더러 (DPR 대응, 배경 레이어 캐시, 결승 연출)
-    horse.js              말·기수 프로시저럴 드로잉, 막판 스퍼트 부스터/우승 후광
-    effects.js            색종이·불꽃놀이 파티클 (결승 연출 전용, 카메라 흔들림 없음)
-  net/
-    adapter.js            어댑터 인터페이스 + 팩토리 + applyPatch
-    local.js              로컬 어댑터 (같은 브라우저 탭 간 동기화, 테스트용)
-    firebase.js           Firebase Realtime Database 어댑터
-  services/
-    auth.js               회원 인증: LocalAuth(PBKDF2 해시) / FirebaseAuth
-    account.js            회원 지갑: LocalWallet / FirestoreWallet(Cloud Firestore users/{uid} 트랜잭션)
-    crypto.js             PBKDF2-SHA256 해시, SHA-256
-    audio.js              합성 사운드
-  ui/
-    login.js, lobby.js, room.js   화면 렌더/이벤트
-    dom.js                헬퍼
-  styles/main.css
-tests/                    node --test (엔진 결정성, 정산, 비밀번호 해시)
-scripts/seed-members.mjs  Firebase 에 테스트 회원 생성
-database.rules.json       Realtime Database 보안 규칙 (rooms)
-firestore.rules           Cloud Firestore 보안 규칙 (users)
-.github/workflows/deploy.yml   main push → 빌드 → GitHub Pages
-```
+1. **로그인** — 회원 아이디와 비밀번호로 들어갑니다.
+2. **방 만들기 또는 참가하기** — 방을 새로 만들면 1회 배팅 금액(1,000 / 5,000 / 10,000원)을 정하고 방 코드가 생깁니다. 그 코드나 초대 링크를 친구에게 보내면 됩니다. 이미 있는 방이면 코드로 들어가면 그만이에요.
+3. **말 고르기** — 출주표에서 마음에 드는 말을 고르고, 단승(1착) 또는 연승(3착 이내) 중 하나를 선택합니다. 누르는 순간 바로 배팅됩니다.
+4. **경주 관람** — 방장이 출발 버튼을 누르면 카운트다운 후 경주가 시작됩니다. 모두가 같은 경주를 동시에 봅니다.
+5. **결과 확인** — 순위와 배당금이 바로 반영됩니다. 방장이 다음 경주를 시작하면 새로운 출주표로 다시 시작해요.
 
 ## 게임 규칙
 
-- 방을 만들 때 **1회 배팅 금액**을 1,000 / 5,000 / 10,000원 중 하나로 정한다. 그 방의 모든 경주는 그 금액으로 배팅한다.
-- 참가자는 매 경주 말과 단승(1착) / 연승(3착 이내)만 고른다.
-- 배팅 카드의 **자동 ON/OFF** 스위치: ON이면 방장이 출발할 때까지 말을 고르지 않아도 무작위 말에 단승으로 자동 배팅된다(잔고가 있을 때). OFF면 말을 고르지 않은 경주는 배팅 없이 관전한다. 설정은 방 참가자 정보(`players/{pid}/autoBet`)와 브라우저에 저장된다.
-- 방장이 **게임 시작 → 배팅 마감·출발 → 다음 경주**를 진행한다. 방장이 나가면 먼저 들어온 참가자가 방장을 이어받는다.
+- **배팅 금액은 방마다 고정**입니다. 5,000원짜리 방에 들어가면 매 경주 5,000원을 겁니다.
+- **단승**은 1등을 맞히는 배팅, **연승**은 3등 안에만 들면 맞는 배팅이에요. 순위가 낮을수록(우승 확률이 낮을수록) 배당이 높습니다.
+- **자동 배팅** 스위치를 켜 두면, 미처 말을 못 골랐을 때 출발 직전 무작위 말에 자동으로 배팅됩니다. 꺼 두면 그 경주는 배팅 없이 구경만 해요. 언제든 화면 위쪽에서 켜고 끌 수 있습니다.
+- 방장이 없어지면 가장 먼저 들어온 사람이 자연스럽게 방장을 이어받습니다.
 
-## 동작 원리
+## 함께 보는 재미
 
-- 경주는 **시드**만 공유하면 모든 기기에서 똑같이 재생된다. 방장이 출발을 누르면 `race.startAt`(출발 시각)이 기록되고, 각 기기는 그 시각을 기준으로 같은 시드의 경주를 고정 간격(1/60초)으로 진행한다. 늦게 들어온 기기나 잠시 멈춘 탭도 공유 시각까지 즉시 따라잡는다.
-- 화면은 스텝 사이를 보간해 그리므로 시뮬레이션 간격과 화면 주사율이 달라도 끊기지 않는다.
-- 정산은 방장 기기가 `results/{no}` 에 한 번 기록하고, 각 참가자 기기는 자기 몫을 **지갑**에 반영한다(같은 경주는 한 번만).
+- 경주는 방 안의 모든 사람에게 완전히 똑같이 보여집니다. 누가 늦게 들어오거나 잠깐 화면을 꺼도 같은 장면에서 다시 만납니다.
+- 최후의 직선 주로에 들어서면 막판 스퍼트 이펙트가 터지고, 결승선이 코앞이면 사진 판정 연출이 뜹니다.
+- 우승마가 결승선을 통과하는 순간 불꽃과 색종이가 화면을 채우고, 우승 배너와 순위표가 화려하게 장식됩니다.
 
-## 회원과 잔고
+---
 
-첫 화면은 **회원 로그인**이다. 로그인 후 방을 만들거나 코드로 참가한다. 초대 링크(`?room=CODE`)로 들어오면 로그인 직후 그 방으로 자동 입장한다.
-
-- 인증: `services/auth.js` — 로컬 모드는 브라우저 저장소에 PBKDF2-SHA256(10만 회, 솔트) 해시로 회원을 저장하고, Firebase 모드는 Firebase Authentication(이메일/비밀번호)을 쓴다. 아이디는 내부적으로 `m-<sha256(아이디)>@horsebattle.app` 이메일로 매핑되므로 한글 아이디도 된다.
-- 지갑: `services/account.js` — 로컬 모드는 `localStorage`, Firebase 모드는 **Cloud Firestore** `users/{uid}` 문서(프로필 + 잔고만)를 트랜잭션으로 갱신한다. 회원 문서에는 경주별 기록을 남기지 않는다.
-- 중복 정산 방지: 경주 정산은 `settle(net)` 로 잔고에 더해지는데, 같은 경주를 두 번 반영하지 않도록 방(room, Realtime Database)의 `results/{no}/settledBy/{pid}` 플래그를 어댑터의 `claim()` 으로 원자적으로 선점한 뒤에만 지갑에 반영한다.
-- 방 상태(실시간 동기화)는 **Realtime Database** `rooms/{code}` 를 쓴다. Firebase 는 비밀번호 6자 이상만 받으므로 사용자가 입력한 비밀번호는 아이디와 함께 SHA-256 으로 늘려 Firebase 비밀번호로 쓰고, Firebase 가 다시 자체 해시(scrypt)로 저장한다.
-- 방의 `players/{pid}/balance` 는 표시용 미러이고 진짜 잔고는 항상 지갑이다.
-- `CONFIG.rescueBelowBet` 가 켜져 있으면 잔고가 배팅액 미만일 때 다음 경주에서 초기 잔고로 복구된다. 운영 시에는 끈다.
-
-테스트 회원 (로컬 모드에서 자동 생성, Firebase 는 시드 스크립트로 생성):
-
-| 아이디 | 비밀번호 |
-|---|---|
-| 박준기 | 1111 |
-| 임준혁 | 2222 |
-| 김민수 | 3333 |
-| 이서연 | 4444 |
-| 최지훈 | 5555 |
-| 정하늘 | 6666 |
-
-## 로컬 테스트
-
-`adapter: 'local'` 상태에서는 같은 브라우저의 탭끼리만 동기화된다. 로그인 세션은 탭 단위라 탭마다 다른 회원으로 들어갈 수 있다.
-
-1. `npm run dev` 후 접속 → 박준기/1111 로그인 → 배팅 금액 선택 → **방 만들기**
-2. 새 탭에서 초대 링크로 접속 → 임준혁/2222 로그인 → 자동 입장
-3. 방장 탭에서 **게임 시작** → 각 탭에서 말 선택 → 방장이 **배팅 마감·출발!**
-
-## GitHub Pages 배포
-
-1. 저장소에 push (`main` 브랜치).
-2. 저장소 **Settings → Pages → Source** 를 **GitHub Actions** 로 선택.
-3. `.github/workflows/deploy.yml` 이 자동으로 빌드·배포한다. 주소: `https://<계정>.github.io/<저장소>/`
-
-`vite.config.js` 의 `base: './'` 덕분에 저장소 이름이 무엇이든 상대 경로로 동작한다.
-
-## Firebase 연결
-
-1. [Firebase 콘솔](https://console.firebase.google.com)에서 프로젝트 생성.
-2. **Authentication → 시작하기 → 로그인 방법 → 이메일/비밀번호** 사용 설정.
-3. **Realtime Database** 생성(방 상태용) → 규칙 탭에 `database.rules.json` 붙여넣기.
-   **Cloud Firestore** 생성(회원 프로필·지갑용) → 규칙 탭에 `firestore.rules` 붙여넣기.
-4. 프로젝트 설정 → 내 앱 → 웹 앱 추가 → SDK 설정값을 `.env.local` 에 입력 (`.env.example` 복사):
-   ```
-   VITE_ADAPTER=firebase
-   VITE_FB_API_KEY=...
-   VITE_FB_AUTH_DOMAIN=<project>.firebaseapp.com
-   VITE_FB_DATABASE_URL=https://<project>-default-rtdb.<region>.firebasedatabase.app
-   VITE_FB_PROJECT_ID=<project>
-   VITE_FB_APP_ID=...
-   ```
-5. 테스트 회원 생성:
-   ```bash
-   npm run seed:members                      # scripts/members.json 의 회원 (scripts/members.example.json 을 복사해 만든다, 커밋 금지)
-   node scripts/seed-members.mjs 아이디 비번   # 한 명 추가
-   ```
-6. `npm run dev` 로 로그인 → 방 만들기 → 다른 기기에서 참가 → 경주 한 번 확인.
-7. GitHub Pages 배포 시 같은 값을 저장소 **Settings → Secrets and variables → Actions** 에 등록하면 워크플로가 빌드에 넣는다.
-
-Firebase 코드는 동적 import 로 분리되어 있어 로컬 모드 번들에는 포함되지 않는다.
-
-## 방 데이터 구조
-
-```
-rooms/{code}
-  code, hostId, createdAt, betAmount
-  phase    'lobby' | 'betting' | 'racing' | 'result'
-  race     { no, seed, startAt }
-  players  { pid: { name, balance, joinedAt, autoBet } }    // pid = 회원 uid, balance 는 표시용 미러
-  bets     { no: { pid: { horse, type, amount, odds, auto? } } }
-  results  { no: { seed, order[], times[], payouts: { pid: { rank, hit, pay, net } }, settledBy: { pid: true } } }
-
-```
-
-Cloud Firestore `users/{uid}` 문서:
-```
-{ username, name, createdAt, balance }
-```
-
-Realtime Database 는 숫자 키(경주 번호)가 있는 객체를 배열로 돌려주므로 `bets[no]`, `results[no]` 는 인덱스 접근으로 읽는다.
-
-## 알려진 제한
-
-- 정산은 방장 기기가 기록하고 각 참가자가 자기 지갑에 반영한다. 조작 방지가 필요해지면 Cloud Functions 가 `results` 를 검증해 지갑을 갱신하도록 옮긴다(`core/engine.js` 의 `simulateResult(seed)` 와 `core/settlement.js` 재사용).
-- 방은 자동 삭제되지 않는다.
-- 회원가입 화면은 없다. 회원은 시드 스크립트로 만든다.
+개발/운영 관련 안내(설치, Firebase 연동, 배포 방법 등)는 [DEVELOPMENT.md](DEVELOPMENT.md)에 있습니다.
