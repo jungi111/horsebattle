@@ -49,7 +49,7 @@ tests/                    node --test (엔진 결정성, 정산, 비밀번호 �
 scripts/seed-members.mjs  Firebase 에 회원 계정 생성
 database.rules.json       Realtime Database 보안 규칙 (rooms)
 firestore.rules           Cloud Firestore 보안 규칙 (users)
-.github/workflows/deploy.yml   main push → 빌드 → GitHub Pages
+.github/workflows/deploy.yml   master push → 빌드 → GitHub Pages
 ```
 
 ## 게임 규칙 (엔진 관점)
@@ -86,7 +86,7 @@ firestore.rules           Cloud Firestore 보안 규칙 (users)
 
 ## GitHub Pages 배포
 
-1. 저장소에 push (`main` 브랜치).
+1. 저장소에 push (`master` 브랜치).
 2. 저장소 **Settings → Pages → Source** 를 **GitHub Actions** 로 선택.
 3. `.github/workflows/deploy.yml` 이 자동으로 빌드·배포한다. 주소: `https://<계정>.github.io/<저장소>/`
 
