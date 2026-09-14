@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.DS_Store
+.claude/
+
+# Firebase 등 실제 키가 들어가는 환경설정 — 절대 커밋하지 않는다 (.env.example 참고)
+.env
+.env.*
+!.env.example
+
+# 실제 회원 비밀번호가 들어가는 시드 목록 — 절대 커밋하지 않는다 (scripts/members.example.json 참고)
+scripts/members.json

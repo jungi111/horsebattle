@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Horse Battle - 온라인 경마</title>
+</head>
+<body>
+<header>
+  <h1>🐎 HORSE <span>BATTLE</span> <small>온라인</small></h1>
+  <div class="hright" id="headerUser" style="display:none">
+    <span class="pill" id="hdUser">-</span>
+    <button class="btn-icon" id="logoutBtn">로그아웃</button>
+  </div>
+  <div class="hright" id="headerRoom" style="display:none">
+    <span class="pill code" id="hdCode" title="클릭하면 초대 링크를 복사합니다">------</span>
+    <span class="pill" id="hdBet">배팅 -</span>
+    <span class="pill" id="hdName">-</span>
+    <div class="balance">잔고 <b id="hdBalance">0</b> 원</div>
+    <button class="switch switch-lg" id="autoBetBtn" type="button" aria-pressed="true" title="말을 안 고르면 자동으로 배팅할지 여부"><span class="knob"></span><span class="label">자동 배팅 ON</span></button>
+    <button class="btn-icon btn-sm" id="muteBtn" title="소리 켜기/끄기">🔊</button>
+  </div>
+</header>
+
+<!-- 로그인 -->
+<section id="screenLogin">
+  <div class="lobby-card">
+    <h2>회원 로그인</h2>
+    <div class="field"><label>아이디</label><input id="loginId" maxlength="20" placeholder="아이디" autocomplete="username"></div>
+    <div class="field"><label>비밀번호</label><input id="loginPw" type="password" maxlength="40" placeholder="비밀번호" autocomplete="current-password"></div>
+    <button class="btn-primary" id="loginBtn">로그인</button>
+    <div class="err" id="loginErr"></div>
+    <p class="login-hint" id="loginHint"></p>
+  </div>
+</section>
+
+<!-- 로비 -->
+<section id="screenLobby" style="display:none">
+  <div class="lobby-card">
+    <div class="wallet"><span><b id="lobbyUser"></b> 님</span><span>내 잔고 <b id="walletBalance">0</b>원</span></div>
+  </div>
+  <div class="row2">
+    <div class="lobby-card">
+      <h2>방 만들기</h2>
+      <p>방마다 배팅 금액이 정해집니다. 참가자는 매 경주 그 금액을 배팅하고 말만 고릅니다.</p>
+      <div class="field"><label>1회 배팅 금액</label><div class="opt-group" id="betAmountOpts"></div></div>
+      <button class="btn-primary" id="createBtn">방 만들기</button>
+    </div>
+    <div class="lobby-card">
+      <h2>참가하기</h2>
+      <div class="field"><label>방 코드</label><input id="codeInput" class="code" maxlength="6" placeholder="ABC123"></div>
+      <button class="btn-primary" id="joinBtn">참가하기</button>
+    </div>
+  </div>
+  <div class="err" id="lobbyErr"></div>
+  <p class="note" id="adapterNote"></p>
+</section>
+
+<!-- 게임 화면 -->
+<main id="screenRoom" style="display:none">
+  <section class="track-wrap">
+    <canvas id="track" width="1000" height="560"></canvas>
+    <div class="status-bar">
+      <span class="phase" id="phase">대기 중</span>
+      <span class="commentary" id="commentary"></span>
+    </div>
+  </section>
+
+  <aside>
+    <div class="card" id="hostCard">
+      <h2>진행 <small id="hostLabel"></small></h2>
+      <div class="host-actions">
+        <button class="btn-primary hidden" id="startGameBtn">게임 시작</button>
+        <button class="btn-primary hidden" id="startRaceBtn">배팅 마감 · 출발!</button>
+        <button class="btn-primary hidden" id="nextRaceBtn">다음 경주</button>
+        <button class="btn-secondary btn-danger" id="leaveBtn">방 나가기</button>
+      </div>
+      <p class="note" id="hostNote"></p>
+    </div>
+
+    <!-- 출주표 + 배팅 (통합) -->
+    <div class="card" id="raceCard">
+      <h2><span id="raceTitle">출주표</span></h2>
+      <div class="bet-type hidden" id="betTypeRow">
+        <button class="active" data-type="win">단승 (1착)</button>
+        <button data-type="place">연승 (3착 이내)</button>
+      </div>
+      <div class="horse-list" id="horseList"></div>
+      <div id="betDone" class="hidden">
+        <div class="mybet" id="myBetBox" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <div class="card hidden" id="resultCard">
+      <h2>경주 결과 <small id="resultTitle"></small></h2>
+      <div id="resultList"></div>
+      <div class="payout none" id="payoutBox"></div>
+      <div class="payout-list" id="payoutList"></div>
+    </div>
+
+    <div class="card">
+      <h2>참가자 <small id="playerCount"></small></h2>
+      <div class="player-list" id="playerList"></div>
+    </div>
+  </aside>
+</main>
+
+<div class="toast" id="toast"></div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
