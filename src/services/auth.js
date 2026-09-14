@@ -6,20 +6,11 @@
 //   auth.logout()                       → Promise<void>
 //   auth.register(username, password)   → Promise<user>         (로컬: 시드용 / Firebase: 시드 스크립트가 사용)
 //
-// - LocalAuth   : 브라우저 저장소에 회원(PBKDF2 해시)을 두는 테스트 구현. 세션은 탭 단위(sessionStorage).
+// - LocalAuth   : 브라우저 저장소에 회원(PBKDF2 해시)을 두는 로컬 구현. 세션은 탭 단위(sessionStorage).
+//                 계정은 자동으로 만들어지지 않는다 — register() 로 직접 만든 회원만 로그인할 수 있다.
 // - FirebaseAuth: Firebase Authentication(이메일/비밀번호). 아이디를 내부 이메일로 매핑해서 사용한다.
 import { CONFIG } from '../config.js';
 import { hashPassword, verifyPassword, sha256hex } from './crypto.js';
-
-/** 테스트 회원 (로컬 모드에서 최초 실행 시 해시해서 저장) */
-export const SEED_MEMBERS = [
-  { username: '박준기', password: '1111' },
-  { username: '임준혁', password: '2222' },
-  { username: '김민수', password: '3333' },
-  { username: '이서연', password: '4444' },
-  { username: '최지훈', password: '5555' },
-  { username: '정하늘', password: '6666' },
-];
 
 const KEY_MEMBERS = 'hb:members';
 const KEY_SESSION = 'hb:session';
@@ -31,13 +22,7 @@ export class LocalAuth {
   _save(m) { localStorage.setItem(KEY_MEMBERS, JSON.stringify(m)); }
 
   async init() {
-    // 시드 회원이 없으면 해시해서 생성
     const m = this._members();
-    let changed = false;
-    for (const s of SEED_MEMBERS) {
-      if (!m[s.username]) { m[s.username] = { id: 'm_' + (await sha256hex(s.username)).slice(0, 12), username: s.username, name: s.username, password: await hashPassword(s.password), createdAt: Date.now() }; changed = true; }
-    }
-    if (changed) this._save(m);
     const saved = sessionStorage.getItem(KEY_SESSION);
     if (saved) { const u = m[saved]; if (u) this.user = { id: u.id, username: u.username, name: u.name }; }
     return this.user;
